@@ -1,0 +1,76 @@
+trigger:
+  branches:
+    include:
+      - master
+    
+pool:
+  vmImage: 'ubuntu-latest'
+
+  isMaster: $[eq(variables['Build.SourceBranch'], 'refs/heads/master')]
+  isPR: $[eq(variables['Build.Reason'], 'PullRequest')]
+
+stages:
+- stage: Tests
+  jobs:
+  - job: Tests
+    steps:
+    - checkout: self 
+      clean: true
+      persistCredentials: true
+
+    - task: CmdLine@2
+      displayName: "Dotnet build"
+      inputs:
+        script:  'dotnet build SimpleApp.sln'
+      
+    - task: CmdLine@2
+      displayName: "Run Tests"
+      inputs:
+        script: 'dotnet test ./SimpleAppTests --no-build --logger:"trx;LogFileName=$(Agent.TempDirectory)/SimpleAppTests/SimpleAppTests.trx" /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura  /p:CoverletOutput=$(Agent.TempDirectory)/SimpleAppTests/'
+
+    - task: PublishTestResults@2
+      displayName: "Publish Tests"
+      inputs:
+        testResultsFormat: 'VSTest'
+        testResultsFiles: |
+          **/*.trx
+        mergeTestResults: true
+        testRunTitle: 'SimpleApp Tests'
+    
+    - task: PublishCodeCoverageResults@1
+      displayName: "Publish Code Coverage"
+      inputs:
+        codeCoverageTool: 'Cobertura'
+        summaryFileLocation: '$(Agent.TempDirectory)/SimpleAppTests/cobertura.xml'
+
+- stage: Build
+  dependsOn: Tests
+  condition: and(succeeded('Tests'),eq(variables.isMaster, true),eq(variables.isPR, false))
+  jobs:
+  - job: Build
+  variables:
+    group: General
+    steps:
+    - checkout: self 
+      clean: true
+      persistCredentials: true
+
+    - task: CmdLine@2
+      displayName: Docker Login
+      inputs:
+        script: |
+          docker login -u $(docker_user) -p $(docker_password) registry.gitlab.com
+
+    - task: CmdLine@2
+      displayName: Docker PreRequisites
+      inputs:
+        script: |
+            docker run --privileged --rm tonistiigi/binfmt --install all
+    - task: CmdLine@2
+      displayName: "Docker Buildx Setup"
+      inputs:
+        script: 'docker buildx create --use'
+    - task: CmdLine@2
+      displayName: "Docker Build and Push"
+      inputs:
+        script: 'docker buildx build --push --platform linux/arm64/v8,linux/amd64 --file SimpleApp/Dockerfile  --no-cache --tag registry.gitlab.com/leonardosimoura-pessoal/glicemic/simple-app:$(Build.BuildNumber) .'
