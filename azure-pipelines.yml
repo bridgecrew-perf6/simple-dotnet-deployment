@@ -1,3 +1,8 @@
+trigger:
+  paths:
+    exclude:
+    - GitOps/deploy
+
 pool:
   vmImage: 'ubuntu-latest'
   
@@ -79,3 +84,56 @@ stages:
       displayName: "Docker Build and Push"
       inputs:
         script: 'docker buildx build --push --platform linux/arm64/v8,linux/amd64 --file SimpleApp/Dockerfile  --no-cache --tag registry.gitlab.com/leonardosimoura-pessoal/glicemic/simple-app:$(Build.BuildNumber) .'
+
+- stage: Release
+  dependsOn: Build
+  condition: and(succeeded('Build'),eq(variables.isMaster, true),eq(variables.isPR, false))
+  jobs:
+    - deployment: Release
+      environment: Release
+      variables: 
+        - group: General
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+            - checkout: self 
+              clean: true
+              persistCredentials: true
+
+            - task: CmdLine@2
+              displayName: "Git config"
+              inputs:
+                script: | 
+                  git config --global user.email "$(git_email)"
+                  git config --global user.name "$(git_name)"
+              env:
+                git_email: $(git_email)
+
+            - task: CmdLine@2
+              displayName: "Create Release File"
+              inputs:
+                script: | 
+                  touch $(Build.Repository.LocalPath)/GitOps/deploy/simple-app.yml
+            
+            - task: CmdLine@2
+              displayName: "Update Release Files"
+              inputs:
+                script: 'envsubst < "$(Build.Repository.LocalPath)/GitOps/base/simple-app.yml" > "$(Build.Repository.LocalPath)/GitOps/deploy/simple-app.yml"'
+              
+            - task: CmdLine@2
+              displayName: "Git add"
+              inputs:
+                script: 'git add GitOps/\*.yml'
+                workingDirectory: $(Build.Repository.LocalPath)
+                
+            - task: CmdLine@2
+              displayName: "Git commit"
+              inputs:
+                script: "git commit -m 'Release $(Build.BuildNumber)'"
+                workingDirectory: $(Build.Repository.LocalPath)
+            - task: CmdLine@2
+              displayName: "Git push for release $(Build.BuildNumber)"
+              inputs:
+                script: 'git push'
+                workingDirectory: $(Build.Repository.LocalPath)
