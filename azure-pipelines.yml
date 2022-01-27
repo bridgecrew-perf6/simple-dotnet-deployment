@@ -109,17 +109,11 @@ stages:
                   git config --global user.name "$(git_name)"
               env:
                 git_email: $(git_email)
-
-            - task: CmdLine@2
-              displayName: "Create Release File"
-              inputs:
-                script: | 
-                  touch $(Build.Repository.LocalPath)/simple-dotnet-deployment/GitOps/deploy/simple-app.yml
             
             - task: CmdLine@2
               displayName: "Update Release Files"
               inputs:
-                script: 'envsubst < "$(Build.Repository.LocalPath)/simple-dotnet-deployment/GitOps/base/simple-app.yml" > "$(Build.Repository.LocalPath)/simple-dotnet-deployment/GitOps/deploy/simple-app.yml"'
+                script: 'envsubst < "$(Build.Repository.LocalPath)/GitOps/base/simple-app.yml" > "$(Build.Repository.LocalPath)/GitOps/deploy/simple-app.yml"'
               
             - task: CmdLine@2
               displayName: "Git add"
