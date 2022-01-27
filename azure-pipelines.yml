@@ -45,11 +45,11 @@ stages:
 
 - stage: Build
   dependsOn: Tests
+  variables:
+  - group: General
   condition: and(succeeded('Tests'),eq(variables.isMaster, true),eq(variables.isPR, false))
   jobs:
   - job: Build
-  variables:
-    group: General
     steps:
     - checkout: self 
       clean: true
@@ -60,6 +60,9 @@ stages:
       inputs:
         script: |
           docker login -u $(docker_user) -p $(docker_password) registry.gitlab.com
+      env:
+        docker_user: $(docker_user)
+        docker_password: $(docker_password)
 
     - task: CmdLine@2
       displayName: Docker PreRequisites
