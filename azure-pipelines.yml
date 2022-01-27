@@ -129,5 +129,5 @@ stages:
             - task: CmdLine@2
               displayName: "Git push for release $(Build.BuildNumber)"
               inputs:
-                script: 'git push'
+                script: 'git push origin HEAD:main'
                 workingDirectory: $(Build.Repository.LocalPath)
