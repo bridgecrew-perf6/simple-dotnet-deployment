@@ -39,7 +39,7 @@ stages:
       inputs:
         testResultsFormat: 'VSTest'
         testResultsFiles: |
-          **/*.trx
+          $(Agent.TempDirectory)/SimpleAppTests/*.trx
         mergeTestResults: true
         testRunTitle: 'SimpleApp Tests'
     
@@ -47,7 +47,7 @@ stages:
       displayName: "Publish Code Coverage"
       inputs:
         codeCoverageTool: 'Cobertura'
-        summaryFileLocation: '$(Agent.TempDirectory)/SimpleAppTests/cobertura.xml'
+        summaryFileLocation: '$(Agent.TempDirectory)/SimpleAppTests/coverage.cobertura.xml'
 
 - stage: Build
   dependsOn: Tests
