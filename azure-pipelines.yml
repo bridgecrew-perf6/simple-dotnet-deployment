@@ -1,7 +1,8 @@
 pool:
   vmImage: 'ubuntu-latest'
-
-  isMaster: $[eq(variables['Build.SourceBranch'], 'refs/heads/master')]
+  
+variables:
+  isMaster: $[or(eq(variables['Build.SourceBranch'], 'refs/heads/main'),eq(variables['Build.SourceBranch'], 'refs/heads/master'))]
   isPR: $[eq(variables['Build.Reason'], 'PullRequest')]
 
 stages:
