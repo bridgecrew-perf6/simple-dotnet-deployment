@@ -18,6 +18,12 @@ stages:
       clean: true
       persistCredentials: true
 
+    - task: UseDotNet@2
+      displayName: Use .NET 6.0
+      inputs:
+        packageType: 'sdk'
+        version: '6.0.x'
+        
     - task: CmdLine@2
       displayName: "Dotnet build"
       inputs:
